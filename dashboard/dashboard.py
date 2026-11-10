@@ -19,7 +19,7 @@ plt.rcParams['font.size'] = 10
 
 COLOR_MAIN = '#4A90E2'      # Biru: Nilai utama / pembeli
 COLOR_ACCENT = '#E63946'    # Merah: Perhatian / risiko / penjual
-COLOR_GOOD = '#2A9D8F'      # Hijau: Kondisi baik / performa tinggi
+COLOR_GOOD = '#2A9D8F'      # Hijau toska: Kondisi baik / performa tinggi / champions
 COLOR_NEUTRAL = '#B8C0CC'   # Abu-abu: Pembanding netral
 
 # Koordinat centroid negara bagian di Brasil untuk peta interaktif
@@ -73,7 +73,7 @@ def load_data():
             df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
             return df
 
-    st.error("Berkas data utama (main_data.csv) tidak ditemukan.")
+    st.error('Berkas data utama (main_data.csv) tidak ditemukan.')
     return None
 
 df_raw = load_data()
@@ -84,64 +84,62 @@ if df_raw is None:
 # KONFIGURASI HALAMAN STREAMLIT
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="E-Commerce Public Analytics Dashboard",
-    page_icon="🛍️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title='E-Commerce Public Analytics Dashboard',
+    page_icon='🛍️',
+    layout='wide',
+    initial_sidebar_state='expanded'
 )
 
 # ---------------------------------------------------------
 # SIDEBAR: PROFIL DAN FILTER INTERAKTIF
 # ---------------------------------------------------------
 with st.sidebar:
-    st.image("https://raw.githubusercontent.com/dicodingacademy/assets/main/logo.png", width=180)
-    st.markdown("### 👨‍💻 Data Analyst")
-    st.markdown("""
+    st.image('https://raw.githubusercontent.com/dicodingacademy/assets/main/logo.png', width=180)
+    st.markdown('### 👨‍💻 Data Analyst')
+    st.markdown('''
     * **Nama:** Dewa Bagus Pradnyana Cahyadi Putra  
     * **Email:** pradnyana08@gmail.com  
     * **Dicoding ID:** `ds014b6y0434`
-    """)
-    st.markdown("---")
-    st.subheader("⚙️ Filter Interaktif")
+    ''')
+    st.markdown('---')
+    st.subheader('⚙️ Filter Interaktif')
 
     # Filter 1: Rentang Tanggal Pemesanan
     min_date = df_raw['order_purchase_timestamp'].min().date()
     max_date = df_raw['order_purchase_timestamp'].max().date()
 
-    st.markdown("**📅 Rentang Tanggal Pemesanan**")
+    st.markdown('**📅 Rentang Tanggal Pemesanan**')
     col_d1, col_d2 = st.columns(2)
     with col_d1:
-        start_date = st.date_input("Mulai", min_value=min_date, max_value=max_date, value=min_date)
+        start_date = st.date_input('Mulai', min_value=min_date, max_value=max_date, value=min_date)
     with col_d2:
-        end_date = st.date_input("Selesai", min_value=min_date, max_value=max_date, value=max_date)
+        end_date = st.date_input('Selesai', min_value=min_date, max_value=max_date, value=max_date)
 
     if start_date > end_date:
-        st.error("Tanggal awal tidak boleh melebihi tanggal akhir!")
+        st.error('Tanggal awal tidak boleh melebihi tanggal akhir!')
         start_date = min_date
         end_date = max_date
 
     # Filter 2: Negara Bagian Pembeli (Customer State)
-    # Default KOSONG agar tidak otomatis memblokir filter, kosong = semua negara bagian
     all_states = sorted(df_raw['customer_state'].dropna().unique().tolist())
     selected_states = st.multiselect(
-        "📍 Negara Bagian Pembeli (State):",
+        '📍 Negara Bagian Pembeli (State):',
         options=all_states,
         default=[],
-        placeholder="Semua Negara Bagian (Default)"
+        placeholder='Semua Negara Bagian (Default)'
     )
 
     # Filter 3: Segmen Pelanggan RFM
-    # Default KOSONG agar tidak otomatis memblokir filter, kosong = semua segmen
-    all_segments = ['Champions', 'Loyal Customers', 'Potential Loyalists', 'At Risk', 'Lost Customers']
+    all_segments = ['Champions', 'Loyal Customers', 'Potential Loyalists', 'At-Risk / Need Attention', 'Lost Customers']
     selected_segments = st.multiselect(
-        "👥 Segmen Pelanggan (RFM):",
+        '👥 Segmen Pelanggan (RFM):',
         options=all_segments,
         default=[],
-        placeholder="Semua Segmen (Default)"
+        placeholder='Semua Segmen (Default)'
     )
 
-    st.markdown("---")
-    st.caption("💡 Jika filter negara bagian atau segmen dikosongkan, dashboard akan menampilkan seluruh data secara default.")
+    st.markdown('---')
+    st.caption('💡 Jika filter negara bagian atau segmen dikosongkan, dashboard akan menampilkan seluruh data secara default.')
 
 # ---------------------------------------------------------
 # APLIKASI FILTER KE DATASET
@@ -151,7 +149,6 @@ filtered_df = df_raw[
     (df_raw['order_purchase_timestamp'].dt.date <= end_date)
 ]
 
-# Terapkan filter hanya jika dipilih oleh pengguna
 if len(selected_states) > 0:
     filtered_df = filtered_df[filtered_df['customer_state'].isin(selected_states)]
 
@@ -164,11 +161,11 @@ order_level_df = filtered_df.drop_duplicates('order_id')
 # ---------------------------------------------------------
 # HEADER & SCORECARD METRIK UTAMA (KPI)
 # ---------------------------------------------------------
-st.title("🛍️ E-Commerce Public Analytics Dashboard")
-st.markdown("""
+st.title('🛍️ E-Commerce Public Analytics Dashboard')
+st.markdown('''
 Dashboard interaktif untuk eksplorasi dan visualisasi mendalam **E-Commerce Public Dataset** (Olist, Brasil), 
 fokus pada transaksi pesanan berstatus *delivered*.
-""")
+''')
 
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 
@@ -179,96 +176,106 @@ avg_rating = order_level_df['review_score'].mean() if not order_level_df.empty e
 avg_delivery = order_level_df['delivery_days'].mean() if not order_level_df.empty else 0.0
 
 with kpi1:
-    st.metric("Total Pesanan", f"{total_orders:,}")
+    st.metric('Total Pesanan', f'{total_orders:,}')
 with kpi2:
-    st.metric("Total Revenue", f"R$ {total_revenue:,.0f}")
+    st.metric('Total Revenue', f'R$ {total_revenue:,.0f}')
 with kpi3:
-    st.metric("Pelanggan Unik", f"{unique_customers:,}")
+    st.metric('Pelanggan Unik', f'{unique_customers:,}')
 with kpi4:
-    st.metric("Rata-rata Rating", f"{avg_rating:.2f} ★")
+    st.metric('Rata-rata Rating', f'{avg_rating:.2f} ★')
 with kpi5:
-    st.metric("Rata-rata Pengiriman", f"{avg_delivery:.1f} Hari")
+    st.metric('Rata-rata Pengiriman', f'{avg_delivery:.1f} Hari')
 
-st.markdown("---")
+st.markdown('---')
 
 # ---------------------------------------------------------
 # TAB VISUALISASI PERTANYAAN BISNIS
 # ---------------------------------------------------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "👥 Pertanyaan 1: Segmentasi RFM",
-    "🗺️ Pertanyaan 2: Geospasial Pasar",
-    "🚚 Pertanyaan 3: Durasi Pengiriman",
-    "📦 Pertanyaan 4: Kinerja Kategori Produk",
-    "💳 Pertanyaan 5: Metode Pembayaran",
-    "📑 Kesimpulan & Rekomendasi"
+    '👥 Pertanyaan 1: Segmentasi RFM',
+    '🗺️ Pertanyaan 2: Geospasial Pasar',
+    '🚚 Pertanyaan 3: Durasi Pengiriman',
+    '📦 Pertanyaan 4: Kinerja Kategori Produk',
+    '💳 Pertanyaan 5: Metode Pembayaran',
+    '📑 Kesimpulan & Rekomendasi'
 ])
 
 # =========================================================
 # TAB 1: PERTANYAAN 1 - SEGMENTASI PELANGGAN BERBASIS RFM
 # =========================================================
 with tab1:
-    st.header("👥 Segmentasi Pelanggan Berbasis Analisis RFM (Recency, Frequency, Monetary)")
-    st.markdown("""
-    **Pertanyaan SMART:** *Bagaimana sebaran segmentasi pelanggan berdasarkan analisis RFM (Recency, Frequency, Monetary) per 30 Agustus 2018, berapa porsi pelanggan pada segmen berisiko (At-Risk / Lost), dan berapa kontribusi revenue dari masing-masing segmen?*
-    """)
+    st.header('👥 Segmentasi Pelanggan Berbasis Analisis RFM (Recency, Frequency, Monetary)')
+    st.markdown('''
+    **Pertanyaan SMART:** *Bagaimana sebaran segmentasi pelanggan berdasarkan analisis RFM (Recency, Frequency, Monetary) per 30 Agustus 2018, berapa porsi pelanggan pada segmen berisiko (At-Risk / Lost), dan bagaimana strategi retensinya?*
+    ''')
 
     rfm_cust_df = filtered_df[['customer_unique_id', 'customer_segment', 'recency', 'frequency', 'monetary']].drop_duplicates('customer_unique_id')
 
     if rfm_cust_df.empty:
-        st.warning("Tidak ada data yang sesuai dengan filter yang dipilih.")
+        st.warning('Tidak ada data yang sesuai dengan filter yang dipilih.')
     else:
-        segment_order = ['Champions', 'Loyal Customers', 'Potential Loyalists', 'At Risk', 'Lost Customers']
-        palette_rfm = [COLOR_GOOD, '#52B788', COLOR_MAIN, '#F4A261', COLOR_ACCENT]
+        # Menghitung jumlah dan persentase pelanggan per segmen (Persis Sesuai Cell 17 Notebook)
+        segment_counts = rfm_cust_df['customer_segment'].value_counts().reset_index()
+        segment_counts.columns = ['customer_segment', 'count']
+        tot_c = segment_counts['count'].sum()
+        segment_counts['percentage'] = (segment_counts['count'] / max(tot_c, 1)) * 100
 
-        rfm_summary = rfm_cust_df.groupby('customer_segment').agg(
-            total_customers=('customer_unique_id', 'count'),
-            total_revenue=('monetary', 'sum'),
-            avg_recency=('recency', 'mean'),
-            repeat_buyers=('frequency', lambda x: (x > 1).sum())
-        ).reindex(segment_order).dropna(subset=['total_customers']).reset_index()
+        # Pengaturan skema warna (Highlight pada segmen berisiko, hijau untuk Champions)
+        palette = []
+        for segment in segment_counts['customer_segment']:
+            if segment in ['At-Risk / Need Attention', 'Lost Customers']:
+                palette.append('#E63946')  # Merah: perhatian / risiko
+            elif segment == 'Champions':
+                palette.append('#2A9D8F')  # Hijau toska: pelanggan utama
+            else:
+                palette.append('#4A90E2')  # Biru standar
 
-        tot_cust = rfm_summary['total_customers'].sum()
-        tot_rev = rfm_summary['total_revenue'].sum()
-        rfm_summary['pct_customers'] = (rfm_summary['total_customers'] / max(tot_cust, 1)) * 100
-        rfm_summary['pct_revenue'] = (rfm_summary['total_revenue'] / max(tot_rev, 1)) * 100
-
-        # --- GRAFIK 1: DUAL BAR CHART (PERSIS SESUAI NOTEBOOK CELL 17) ---
-        fig1, ax1 = plt.subplots(1, 2, figsize=(16, 6))
-
-        # Panel 1: Jumlah Pelanggan per Segmen (5 Bar)
+        # --- GRAFIK 1: HORIZONTAL BAR CHART (PERSIS SESUAI NOTEBOOK CELL 17) ---
+        fig1, ax1 = plt.subplots(figsize=(12, 5.5))
         sns.barplot(
-            data=rfm_summary, x='customer_segment', y='total_customers',
-            order=rfm_summary['customer_segment'], palette=palette_rfm[:len(rfm_summary)], ax=ax1[0]
+            data=segment_counts,
+            x='count',
+            y='customer_segment',
+            palette=palette,
+            ax=ax1
         )
-        ax1[0].set_title('Distribusi Jumlah Pelanggan per Segmen RFM', fontsize=12, fontweight='bold', pad=10)
-        ax1[0].set_xlabel('Segmen Pelanggan', fontsize=10)
-        ax1[0].set_ylabel('Jumlah Pelanggan', fontsize=10)
-        max_cust = rfm_summary['total_customers'].max()
-        for i, (val, pct) in enumerate(zip(rfm_summary['total_customers'], rfm_summary['pct_customers'])):
-            ax1[0].text(i, val + (max_cust * 0.02), f"{val:,}\n({pct:.1f}%)", ha='center', fontsize=9)
-        ax1[0].set_ylim(0, max_cust * 1.18)
-        ax1[0].tick_params(axis='x', rotation=15)
 
-        # Panel 2: Total Revenue per Segmen (5 Bar)
-        sns.barplot(
-            data=rfm_summary, x='customer_segment', y='total_revenue',
-            order=rfm_summary['customer_segment'], palette=palette_rfm[:len(rfm_summary)], ax=ax1[1]
-        )
-        ax1[1].set_title('Kontribusi Revenue per Segmen RFM (BRL)', fontsize=12, fontweight='bold', pad=10)
-        ax1[1].set_xlabel('Segmen Pelanggan', fontsize=10)
-        ax1[1].set_ylabel('Total Revenue (R$)', fontsize=10)
-        max_rev = rfm_summary['total_revenue'].max()
-        for i, (val, pct) in enumerate(zip(rfm_summary['total_revenue'], rfm_summary['pct_revenue'])):
-            ax1[1].text(i, val + (max_rev * 0.02), f"R$ {val:,.0f}\n({pct:.1f}%)", ha='center', fontsize=9)
-        ax1[1].set_ylim(0, max_rev * 1.18)
-        ax1[1].tick_params(axis='x', rotation=15)
+        # Label Nilai dan Persentase pada Bar
+        max_c = segment_counts['count'].max()
+        for idx, row in segment_counts.iterrows():
+            ax1.text(
+                row['count'] + (max_c * 0.015),
+                idx,
+                f"{row['count']:,} ({row['percentage']:.1f}%)",
+                va='center',
+                fontsize=10.5,
+                fontweight='bold',
+                color='#333333'
+            )
 
+        ax1.set_title('Distribusi Segmentasi Pelanggan Berdasarkan RFM Analysis', fontsize=14, fontweight='bold', pad=15)
+        ax1.set_xlabel('Jumlah Pelanggan', fontsize=11, labelpad=10)
+        ax1.set_ylabel('Segmen Pelanggan', fontsize=11)
+        ax1.set_xlim(0, max_c * 1.25)
+        ax1.grid(axis='x', linestyle='--', alpha=0.7)
         plt.tight_layout()
         st.pyplot(fig1)
         plt.close(fig1)
 
         # Tabel Rincian Metrik Segmen
-        st.subheader("📋 Ringkasan Metrik Segmen RFM")
+        st.subheader('📋 Ringkasan Metrik Segmen RFM')
+        segment_order_full = ['Champions', 'Loyal Customers', 'Potential Loyalists', 'At-Risk / Need Attention', 'Lost Customers']
+        rfm_summary = rfm_cust_df.groupby('customer_segment').agg(
+            total_customers=('customer_unique_id', 'count'),
+            total_revenue=('monetary', 'sum'),
+            avg_recency=('recency', 'mean'),
+            repeat_buyers=('frequency', lambda x: (x > 1).sum())
+        ).reindex(segment_order_full).dropna(subset=['total_customers']).reset_index()
+
+        tot_rev = rfm_summary['total_revenue'].sum()
+        rfm_summary['pct_customers'] = (rfm_summary['total_customers'] / max(tot_c, 1)) * 100
+        rfm_summary['pct_revenue'] = (rfm_summary['total_revenue'] / max(tot_rev, 1)) * 100
+
         display_summary = rfm_summary.copy()
         display_summary.columns = [
             'Segmen Pelanggan', 'Total Pelanggan', 'Total Revenue (R$)',
@@ -287,21 +294,22 @@ with tab1:
             use_container_width=True
         )
 
-        with st.expander("💡 **Insight Kunci Segmentasi RFM** (klik untuk membuka)", expanded=True):
-            st.markdown("""
-- **Dominasi Segmen Berisiko (At Risk & Lost Customers):** Segmen *Lost Customers* (54.412 pelanggan, 58,3%) dan *At Risk* (996 pelanggan, 1,1%) secara kumulatif mencakup lebih dari **59%** basis pelanggan dan menyumbang lebih dari **58%** pendapatan historis (R$ 7,66 juta).
-- **Segmen Champions & Loyal:** Mencakup ~1,9% pelanggan, merupakan pembeli setia dengan transaksi belanja berulang dan skor moneter tertinggi.
-- **Tantangan Repeat Order:** Sebanyak **97%** pelanggan platform hanya pernah bertransaksi satu kali (*one-time buyer*). Program *retention marketing* seperti kupon diskon pesanan kedua (*second-order voucher*) menjadi kunci menjaga kelangsungan pendapatan.
-            """)
+        with st.expander('💡 **Insight Kunci Segmentasi RFM** (klik untuk membuka)', expanded=True):
+            st.markdown('''
+- **Proporsi Segmen Tertinggi:** Segmen terbesar didominasi oleh **Loyal Customers** sebanyak **32.283 pelanggan (34,6%)** dan **Potential Loyalists** sebanyak **22.922 pelanggan (24,6%)**, yang menunjukkan bahwa lebih dari **59,2%** basis pelanggan memiliki aktivitas transaksi yang sangat baik.
+- **Tingkat Risiko Churn (At-Risk & Lost):** Terdapat akumulasi sebesar **39,9%** pelanggan berisiko tinggi, terdiri dari **Lost Customers** sebanyak **18.639 pelanggan (20,0%)** dan **At-Risk / Need Attention** sebanyak **18.577 pelanggan (19,9%)**. Kelompok ini mencakup pelanggan yang sudah lama tidak melakukan transaksi kembali (*recency* tinggi).
+- **Segmen Utama (Champions):** Kategori pelanggan terbaik (**Champions**) mencakup **937 pelanggan (1,0%)**. Meskipun persentasenya paling kecil, kelompok ini memiliki frekuensi belanja dan nilai nominal pengeluaran (*monetary value*) tertinggi secara konsisten.
+- **Rekomendasi Bisnis:** Fokuskan strategi pemasaran pada kampanye *Win-Back Promo* dan penawaran re-aktivasi otomatis untuk segmen *At-Risk / Need Attention* dan *Lost Customers* guna mendorong *repeat order*, serta berikan program keanggotaan eksklusif (*loyalty rewards*) untuk menjaga segmen *Champions* dan *Loyal Customers*.
+            ''')
 
 # =========================================================
 # TAB 2: PERTANYAAN 2 - DISTRIBUSI GEOSPASIAL PASAR
 # =========================================================
 with tab2:
-    st.header("🗺️ Distribusi Geospasial Pasar: Pembeli vs Penjual")
-    st.markdown("""
+    st.header('🗺️ Distribusi Geospasial Pasar: Pembeli vs Penjual')
+    st.markdown('''
     **Pertanyaan SMART:** *Negara bagian (state) mana yang mencatatkan jumlah pesanan dan revenue tertinggi, bagaimana perbandingannya dengan jumlah penjual (seller) lokal, dan bagaimana ketimpangan pasokan antarwilayah di Brasil?*
-    """)
+    ''')
 
     # Agregasi Pembeli
     geo_buyer = order_level_df.groupby('customer_state').agg(
@@ -340,7 +348,7 @@ with tab2:
     ax2[0].set_ylabel('Negara Bagian (State)', fontsize=10)
     max_to = top_states['total_orders'].max()
     for i, val in enumerate(top_states['total_orders']):
-        ax2[0].text(val + (max_to * 0.02), i, f"{val:,}", va='center', fontsize=9)
+        ax2[0].text(val + (max_to * 0.02), i, f'{val:,}', va='center', fontsize=9)
     ax2[0].set_xlim(0, max_to * 1.18)
 
     # Panel 2: Porsi Pesanan Pembeli vs Porsi Penjual Aktif (Grouped Bar Chart - 12 Pasang Bar)
@@ -360,7 +368,7 @@ with tab2:
     plt.close(fig2)
 
     # --- PETA INTERAKTIF SEBARAN GEOSPASIAL ---
-    st.subheader("📍 Peta Interaktif Sebaran Permintaan Negara Bagian di Brasil")
+    st.subheader('📍 Peta Interaktif Sebaran Permintaan Negara Bagian di Brasil')
     map_data_list = []
     for _, row in geo_balance.iterrows():
         st_code = row['state']
@@ -381,31 +389,31 @@ with tab2:
         with col_m1:
             st.map(map_df, latitude='lat', longitude='lon', size='total_orders', color='#4A90E2')
         with col_m2:
-            st.markdown("##### 📌 Negara Bagian Teratas")
+            st.markdown('##### 📌 Negara Bagian Teratas')
             display_map = map_df[['state', 'name', 'total_orders', 'total_sellers']].sort_values('total_orders', ascending=False).head(10).copy()
             display_map.columns = ['State', 'Nama', 'Pesanan', 'Penjual']
             st.dataframe(display_map, use_container_width=True)
 
-    with st.expander("💡 **Insight Geospasial (Pembeli vs Penjual)** (klik untuk membuka)", expanded=True):
-        st.markdown("""
-- **Sentralisasi di São Paulo (SP):** São Paulo (SP) menjadi pusat perniagaan e-commerce terbesar di Brasil dengan menguasai **40.494 pesanan (42,0%)** dan menampung hampir **60% penjual aktif** (1.769 penjual).
-- **Defisit Pasokan Penjual Lokal:** Wilayah seperti Rio de Janeiro (RJ: 12,8% pesanan vs 5,5% penjual) dan Minas Gerais (MG: 11,8% pesanan vs 7,9% penjual) mengalami defisit penjual lokal yang tinggi, sehingga sangat bergantung pada pengiriman lintas wilayah (*inter-state*).
-        """)
+    with st.expander('💡 **Insight Geospasial (Pembeli vs Penjual)** (klik untuk membuka)', expanded=True):
+        st.markdown('''
+- **Konsentrasi Ekstrem:** Negara bagian São Paulo (SP) mencatatkan lebih dari **41%** dari seluruh pesanan nasional dan menampung lebih dari **70% penjual aktif** di Brasil.
+- **Defisit Penjual di Luar SP:** Wilayah seperti Rio de Janeiro (RJ: 12,8% pesanan vs 5,5% penjual) dan Minas Gerais (MG: 11,8% pesanan vs 7,9% penjual) memiliki permintaan tinggi namun rasio penjual lokal yang minim, memaksa pengiriman lintas wilayah (*inter-state*) yang meningkatkan waktu dan biaya pengiriman.
+        ''')
 
 # =========================================================
 # TAB 3: PERTANYAAN 3 - DURASI PENGIRIMAN & REVIEW SCORE
 # =========================================================
 with tab3:
-    st.header("🚚 Hubungan Durasi Pengiriman dengan Kepuasan Pelanggan (Review Score)")
-    st.markdown("""
+    st.header('🚚 Hubungan Durasi Pengiriman dengan Kepuasan Pelanggan (Review Score)')
+    st.markdown('''
     **Pertanyaan SMART:** *Bagaimana pengaruh durasi pengiriman terhadap skor ulasan pelanggan (review score), dan seberapa drastis kepuasan pelanggan turun ketika pengiriman terlambat dari estimasi (late vs estimate)?*
-    """)
+    ''')
 
     deliv_df = order_level_df.dropna(subset=['delivery_days', 'review_score']).copy()
     deliv_df = deliv_df[deliv_df['delivery_days'] >= 0]
 
     if deliv_df.empty:
-        st.warning("Data durasi pengiriman dan ulasan tidak tersedia pada filter saat ini.")
+        st.warning('Data durasi pengiriman dan ulasan tidak tersedia pada filter saat ini.')
     else:
         def categorize_delivery_speed(d):
             if d <= 7:
@@ -441,7 +449,7 @@ with tab3:
         ax3[0].set_ylabel('Rata-rata Skor Ulasan (Skala 1-5)', fontsize=10)
         ax3[0].set_ylim(0, 5.2)
         for i, (val, n) in enumerate(zip(speed_summary['avg_review'], speed_summary['total_orders'])):
-            ax3[0].text(i, val + 0.12, f"{val:.2f} ★\n({n:,} pesanan)", ha='center', fontsize=9)
+            ax3[0].text(i, val + 0.12, f'{val:.2f} ★\n({n:,} pesanan)', ha='center', fontsize=9)
         ax3[0].tick_params(axis='x', rotation=10)
 
         # Panel 2: Dampak Keterlambatan Pengiriman (2 Bar)
@@ -454,26 +462,26 @@ with tab3:
         for i, (val, n, pct) in enumerate(zip(
             late_summary['avg_review'], late_summary['total_orders'], late_summary['pct_positive']
         )):
-            ax3[1].text(i, val + 0.12, f"{val:.2f} ★\n{pct:.1f}% ulasan positif\n({n:,} pesanan)", ha='center', fontsize=9)
+            ax3[1].text(i, val + 0.12, f'{val:.2f} ★\n{pct:.1f}% ulasan positif\n({n:,} pesanan)', ha='center', fontsize=9)
 
         plt.tight_layout()
         st.pyplot(fig3)
         plt.close(fig3)
 
-        with st.expander("💡 **Insight Hubungan Pengiriman & Kepuasan** (klik untuk membuka)", expanded=True):
-            st.markdown("""
-- **Penalti Keterlambatan Estimasi:** Pesanan yang datang tepat waktu mendapatkan skor rating tinggi **4,29 ★** dengan **82,3% ulasan positif** (88.644 pesanan). Sebaliknya, pesanan yang terlambat melewati estimasi mengalami penurunan kepuasan drastis ke **2,57 ★** dengan hanya **33,8% ulasan positif** (7.826 pesanan).
-- **Batas Kritis Durasi:** Rata-rata kepuasan tetap sangat baik pada durasi *Fast* (<=7 hari: 4,42 ★) dan *Normal* (8-14 hari: 4,31 ★). Kepuasan mulai anjlok tajam saat pengiriman memakan waktu *Very Slow* (>21 hari: 3,12 ★).
-            """)
+        with st.expander('💡 **Insight Hubungan Pengiriman & Kepuasan** (klik untuk membuka)', expanded=True):
+            st.markdown('''
+- **Sensitivitas Keterlambatan:** Keterlambatan melewati tanggal estimasi adalah pemicu penurunan kepuasan paling tajam, di mana rating anjlok dari rata-rata **4,29 menjadi 2,57** bintang (ulasan positif anjlok dari 82,3% ke 33,8%).
+- **Ambang Batas Kecepatan:** Pengiriman di bawah 14 hari menghasilkan rating kepuasan yang sangat stabil di atas 4,3 (Fast <=7 hari: 4,42 ★; Normal 8-14 hari: 4,31 ★). Efisiensi logistik pada 2 minggu pertama merupakan kunci mempertahankan sentimen positif pelanggan.
+            ''')
 
 # =========================================================
 # TAB 4: PERTANYAAN 4 - KINERJA KATEGORI PRODUK
 # =========================================================
 with tab4:
-    st.header("📦 Kinerja Kategori Produk (Revenue & Volume Pesanan)")
-    st.markdown("""
+    st.header('📦 Kinerja Kategori Produk (Revenue & Volume Pesanan)')
+    st.markdown('''
     **Pertanyaan SMART:** *Kategori produk apa saja yang menjadi penyumbang revenue dan volume pesanan terbesar di platform, serta kategori mana yang kinerjanya paling rendah (bottom categories)?*
-    """)
+    ''')
 
     prod_perf = filtered_df.dropna(subset=['product_category_name_english']).groupby('product_category_name_english').agg(
         total_orders=('order_id', 'nunique'),
@@ -482,7 +490,7 @@ with tab4:
     ).reset_index().rename(columns={'product_category_name_english': 'product_category'})
 
     if prod_perf.empty:
-        st.warning("Data kategori produk tidak tersedia pada filter saat ini.")
+        st.warning('Data kategori produk tidak tersedia pada filter saat ini.')
     else:
         prod_perf['product_category'] = prod_perf['product_category'].str.replace('_', ' ').str.title()
         top_revenue = prod_perf.sort_values('total_revenue', ascending=False).head(10)
@@ -499,7 +507,7 @@ with tab4:
         ax4a[0].set_ylabel('Kategori Produk', fontsize=10)
         max_rev = top_revenue['total_revenue'].max()
         for i, val in enumerate(top_revenue['total_revenue']):
-            ax4a[0].text(val + (max_rev * 0.02), i, f"R$ {val:,.0f}", va='center', fontsize=9)
+            ax4a[0].text(val + (max_rev * 0.02), i, f'R$ {val:,.0f}', va='center', fontsize=9)
         ax4a[0].set_xlim(0, max_rev * 1.3)
         ax4a[0].ticklabel_format(style='plain', axis='x')
 
@@ -510,15 +518,15 @@ with tab4:
         ax4a[1].set_ylabel('')
         max_vol = top_volume['total_orders'].max()
         for i, val in enumerate(top_volume['total_orders']):
-            ax4a[1].text(val + (max_vol * 0.02), i, f"{val:,}", va='center', fontsize=9)
+            ax4a[1].text(val + (max_vol * 0.02), i, f'{val:,}', va='center', fontsize=9)
         ax4a[1].set_xlim(0, max_vol * 1.25)
 
         plt.tight_layout()
         st.pyplot(fig4a)
         plt.close(fig4a)
 
-        # --- GRAFIK 4B: BOTTOM 10 REVENUE (PERSIS SESUAI NOTEBOOK CELL 26 - 10 BAR) ---
-        st.subheader("⚠️ Bottom 10 Kategori Berdasarkan Revenue Terendah")
+        # --- GRAFIK 4B: BOTTOM 10 REVENUE (PERSIS SESUAI NOTEBOOK) ---
+        st.subheader('⚠️ Bottom 10 Kategori Berdasarkan Revenue Terendah')
         fig4b, ax4b = plt.subplots(figsize=(11, 4.5))
         sns.barplot(data=bottom_revenue, x='total_revenue', y='product_category', color=COLOR_ACCENT, ax=ax4b)
         ax4b.set_title('Bottom 10 Kategori Berdasarkan Revenue', fontsize=12, fontweight='bold', pad=10)
@@ -526,33 +534,33 @@ with tab4:
         ax4b.set_ylabel('Kategori Produk', fontsize=10)
         max_bot = bottom_revenue['total_revenue'].max()
         for i, (val, ords) in enumerate(zip(bottom_revenue['total_revenue'], bottom_revenue['total_orders'])):
-            ax4b.text(val + (max_bot * 0.02), i, f"R$ {val:,.0f} ({ords} pesanan)", va='center', fontsize=8.5)
+            ax4b.text(val + (max_bot * 0.02), i, f'R$ {val:,.0f} ({ords} pesanan)', va='center', fontsize=8.5)
         ax4b.set_xlim(0, max_bot * 1.35)
 
         plt.tight_layout()
         st.pyplot(fig4b)
         plt.close(fig4b)
 
-        with st.expander("💡 **Insight Kinerja Kategori Produk** (klik untuk membuka)", expanded=True):
-            st.markdown("""
-- **Top 3 Kontributor Omset:** *Health Beauty* (R$ 1.233.132), *Watches Gifts* (R$ 1.165.899), dan *Bed Bath Table* (R$ 1.023.435) menjadi tiga kategori utama yang masing-masing melampaui R$ 1 juta.
-- **Nilai per Pesanan Tinggi:** Kategori *Watches Gifts* berada pada posisi ke-7 dalam volume pesanan (5.493 pesanan) namun berada di peringkat ke-2 dalam perolehan revenue karena nilai rata-rata belanja yang tinggi per item.
-- **Bottom 10 Kategori:** Kategori seperti *Security And Services* (R$ 283; 2 pesanan) dan *Fashion Childrens Clothes* (R$ 520; 7 pesanan) menyumbangkan porsi revenue yang sangat kecil (< 0,1%).
-            """)
+        with st.expander('💡 **Insight Kinerja Kategori Produk** (klik untuk membuka)', expanded=True):
+            st.markdown('''
+- **Penopang Utama Revenue:** Kategori `Health Beauty` (R$ 1.233.132), `Watches Gifts` (R$ 1.165.899), dan `Bed Bath Table` (R$ 1.023.435) menjadi kontributor terbesar dengan akumulasi omset di atas R$ 1 juta masing-masing.
+- **Kategori Bervolume Tinggi vs Bernilai Tinggi:** Kategori `Watches Gifts` mencatat volume pesanan moderat (5.493 pesanan) namun memiliki nilai revenue per pesanan yang sangat tinggi, sedangkan `Bed Bath Table` unggul secara konsisten dalam volume pesanan.
+- **Bottom 10 Kategori:** Kategori seperti `Security And Services` (R$ 283; 2 pesanan) dan `Fashion Childrens Clothes` (R$ 520; 7 pesanan) menyumbangkan porsi revenue yang sangat kecil (< 0,1%).
+            ''')
 
 # =========================================================
 # TAB 5: PERTANYAAN 5 - METODE PEMBAYARAN & CICILAN
 # =========================================================
 with tab5:
-    st.header("💳 Metode Pembayaran, Nilai Transaksi, dan Cicilan")
-    st.markdown("""
+    st.header('💳 Metode Pembayaran, Nilai Transaksi, dan Cicilan')
+    st.markdown('''
     **Pertanyaan SMART:** *Metode pembayaran apa yang paling dominan digunakan pelanggan, dan bagaimana pemilihan jumlah cicilan kartu kredit memengaruhi nilai rata-rata pesanan (Average Order Value / AOV)?*
-    """)
+    ''')
 
     pay_df = order_level_df.dropna(subset=['primary_payment_type']).copy()
 
     if pay_df.empty:
-        st.warning("Data pembayaran tidak tersedia pada filter saat ini.")
+        st.warning('Data pembayaran tidak tersedia pada filter saat ini.')
     else:
         pay_summary = pay_df.groupby('primary_payment_type').agg(
             total_orders=('order_id', 'count'),
@@ -611,36 +619,37 @@ with tab5:
         ax5[1].set_ylabel('Average Order Value (R$)', fontsize=10)
         max_aov = installment_summary['avg_order_value'].max()
         for i, (aov, n) in enumerate(zip(installment_summary['avg_order_value'], installment_summary['total_orders'])):
-            ax5[1].text(i, aov + (max_aov * 0.02), f"R$ {aov:,.0f}\n({n:,})", ha='center', fontsize=9)
+            ax5[1].text(i, aov + (max_aov * 0.02), f'R$ {aov:,.0f}\n({n:,})', ha='center', fontsize=9)
         ax5[1].set_ylim(0, max_aov * 1.22)
 
         plt.tight_layout()
         st.pyplot(fig5)
         plt.close(fig5)
 
-        with st.expander("💡 **Insight Metode Pembayaran & Cicilan** (klik untuk membuka)", expanded=True):
-            st.markdown("""
-- **Dominasi Kartu Kredit:** Kartu kredit menjadi instrumen utama pada **72.818 pesanan (75,5%)** dan menyerap **78,5% total nilai pembayaran** (R$ 12,10 juta).
-- **Efek Pendorong Cicilan (Installment Uplift):** Terdapat korelasi positif yang nyata antara panjang tenor cicilan dengan nilai transaksi. Pembeli dengan cicilan >10x mencatatkan AOV sebesar **R$ 361**, meningkat 3,6 kali lipat dibandingkan transaksi 1x bayar penuh (R$ 101).
-            """)
+        with st.expander('💡 **Insight Metode Pembayaran & Cicilan** (klik untuk membuka)', expanded=True):
+            st.markdown('''
+- **Dominasi Kartu Kredit:** Metode pembayaran kartu kredit mendominasi **75,5%** dari seluruh pesanan (72.818 pesanan) dan **78,5%** total nilai transaksi (R$ 12,10 juta).
+- **Efek Pendorong Cicilan (Installment Uplift):** Terdapat korelasi positif yang sangat kuat antara tenor cicilan dengan nilai transaksi. Pelanggan yang memanfaatkan cicilan >10x memiliki AOV mencapai **R$ 361**, lebih dari 3 kali lipat dibanding pembelian tunai/1x cicilan (R$ 101).
+            ''')
 
 # =========================================================
 # TAB 6: KESIMPULAN EKSEKUTIF & REKOMENDASI BISNIS
 # =========================================================
 with tab6:
-    st.header("📑 Kesimpulan Eksekutif & Rekomendasi Bisnis")
-    st.markdown("---")
+    st.header('📑 Kesimpulan Eksekutif & Rekomendasi Bisnis')
+    st.markdown('---')
 
     col_c1, col_c2 = st.columns(2)
 
     with col_c1:
-        st.subheader("📌 Kesimpulan Berdasarkan 5 Pertanyaan SMART")
-        st.markdown("""
+        st.subheader('📌 Kesimpulan Berdasarkan 5 Pertanyaan SMART')
+        st.markdown('''
 1. **Segmentasi Pelanggan (RFM):**
-   * Pelanggan didominasi pembeli satu kali (*one-time buyers*, ~97%).
-   * Segmen berisiko (*At Risk* dan *Lost Customers*) mencakup lebih dari **59%** basis pelanggan dan menyumbangkan lebih dari separuh pendapatan historis perusahaan.
+   * Segmen pelanggan didominasi oleh **Loyal Customers (34,6%)** dan **Potential Loyalists (24,6%)**, menunjukkan lebih dari **59,2%** pelanggan memiliki riwayat transaksi yang aktif dan positif.
+   * Kelompok pelanggan berisiko (*At-Risk / Need Attention* dan *Lost Customers*) mencakup **39,9%** basis pelanggan, yang memerlukan penanganan khusus melalui kampanye *win-back* dan reaktivasi.
+   * Segmen terbaik (*Champions*) mencakup **1,0%** pelanggan dengan frekuensi belanja dan nilai moneter tertinggi secara konsisten.
 2. **Distribusi Geospasial Pasar:**
-   * Konsentrasi ekonomi sangat kuat di São Paulo (SP) yang menyerap **42,0%** pesanan nasional (40.494 pesanan) dan menampung hampir 60% penjual aktif.
+   * Konsentrasi ekonomi sangat kuat di São Paulo (SP) yang menyerap **42,0%** pesanan nasional (40.494 pesanan) dan menampung hampir 60% penjual aktif (70%+ konsentrasi penjual).
    * Negara bagian lain (RJ, MG, RS) mengalami defisit penjual lokal yang tinggi sehingga bergantung pada pengiriman lintas wilayah.
 3. **Durasi Pengiriman & Kepuasan:**
    * Ketepatan waktu terhadap estimasi adalah faktor penentu utama: pesanan tepat waktu meraih rating rata-rata **4,29 ★**, sedangkan pesanan terlambat anjlok ke **2,57 ★**.
@@ -651,11 +660,11 @@ with tab6:
 5. **Metode Pembayaran & Cicilan:**
    * Kartu kredit mendominasi 75,5% pesanan dan 78,5% nilai transaksi.
    * Fasilitas cicilan terbukti efektif melipatgandakan *basket size* belanja (AOV cicilan >10x mencapai R$ 361 dibanding R$ 101 pada pembayaran penuh).
-        """)
+        ''')
 
     with col_c2:
-        st.subheader("🎯 Rekomendasi Aksi Nyata (Actionable Insights)")
-        st.markdown("""
+        st.subheader('🎯 Rekomendasi Aksi Nyata (Actionable Insights)')
+        st.markdown('''
 1. **Automated Early-Retention Program:**
    * Kirimkan voucher diskon pembelian kedua (*second-order coupon*) secara otomatis dalam 7–14 hari setelah barang tiba untuk menaikkan repeat purchase rate dari 3%.
 2. **Pengembangan Hub Logistik Regional:**
@@ -664,7 +673,7 @@ with tab6:
    * Tambahkan batas aman (*safety buffer*) 2–3 hari pada estimasi tiba di wilayah rawan keterlambatan guna menghindari penalti rating 2,5 bintang.
 4. **Program Promosi Cicilan 0%:**
    * Gandeng bank penerbit kartu kredit untuk memberikan opsi cicilan 0% pada produk kategori bernilai tinggi (*Watches*, *Computers*, *Appliances*) guna mendongkrak omset.
-        """)
+        ''')
 
-    st.markdown("---")
-    st.caption("Dicoding Submission: Proyek Analisis Data | Dewa Bagus Pradnyana Cahyadi Putra | E-Commerce Public Dataset")
+    st.markdown('---')
+    st.caption('Dicoding Submission: Proyek Analisis Data | Dewa Bagus Pradnyana Cahyadi Putra | E-Commerce Public Dataset')
