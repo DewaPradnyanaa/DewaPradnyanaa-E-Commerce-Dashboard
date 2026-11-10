@@ -12,7 +12,7 @@ os.environ['MPLCONFIGDIR'] = os.path.join(tempfile.gettempdir(), 'matplotlib_cac
 warnings.filterwarnings('ignore')
 
 # ---------------------------------------------------------
-# KONFIGURASI TEMA DAN PALET WARNA (Sesuai dengan Notebook)
+# KONFIGURASI TEMA DAN PALET WARNA (Persis Sesuai Notebook)
 # ---------------------------------------------------------
 sns.set_theme(style='whitegrid')
 plt.rcParams['font.size'] = 10
@@ -22,7 +22,7 @@ COLOR_ACCENT = '#E63946'    # Merah: Perhatian / risiko / penjual
 COLOR_GOOD = '#2A9D8F'      # Hijau: Kondisi baik / performa tinggi
 COLOR_NEUTRAL = '#B8C0CC'   # Abu-abu: Pembanding netral
 
-# Koordinat centroid negara bagian di Brasil untuk visualisasi peta interaktif
+# Koordinat centroid negara bagian di Brasil untuk peta interaktif
 BRAZIL_STATES_COORDS = {
     'AC': {'lat': -9.0238, 'lon': -70.8120, 'name': 'Acre'},
     'AL': {'lat': -9.5713, 'lon': -36.7820, 'name': 'Alagoas'},
@@ -91,7 +91,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# SIDEBAR: PROFIL, FILTER, DAN KONTROL
+# SIDEBAR: PROFIL DAN FILTER INTERAKTIF
 # ---------------------------------------------------------
 with st.sidebar:
     st.image("https://raw.githubusercontent.com/dicodingacademy/assets/main/logo.png", width=180)
@@ -121,26 +121,27 @@ with st.sidebar:
         end_date = max_date
 
     # Filter 2: Negara Bagian Pembeli (Customer State)
+    # Default KOSONG agar tidak otomatis memblokir filter, kosong = semua negara bagian
     all_states = sorted(df_raw['customer_state'].dropna().unique().tolist())
     selected_states = st.multiselect(
         "📍 Negara Bagian Pembeli (State):",
         options=all_states,
-        default=all_states,
-        help="Pilih satu atau lebih negara bagian tujuan pesanan."
+        default=[],
+        placeholder="Semua Negara Bagian (Default)"
     )
 
     # Filter 3: Segmen Pelanggan RFM
+    # Default KOSONG agar tidak otomatis memblokir filter, kosong = semua segmen
     all_segments = ['Champions', 'Loyal Customers', 'Potential Loyalists', 'At Risk', 'Lost Customers']
-    existing_segments = [s for s in all_segments if s in df_raw['customer_segment'].unique()]
     selected_segments = st.multiselect(
         "👥 Segmen Pelanggan (RFM):",
-        options=existing_segments,
-        default=existing_segments,
-        help="Filter berdasarkan klasifikasi RFM pelanggan."
+        options=all_segments,
+        default=[],
+        placeholder="Semua Segmen (Default)"
     )
 
     st.markdown("---")
-    st.info("💡 Gunakan filter di atas untuk memperbarui metrik KPI dan visualisasi pada seluruh tab secara dinamis.")
+    st.caption("💡 Jika filter negara bagian atau segmen dikosongkan, dashboard akan menampilkan seluruh data secara default.")
 
 # ---------------------------------------------------------
 # APLIKASI FILTER KE DATASET
@@ -150,10 +151,11 @@ filtered_df = df_raw[
     (df_raw['order_purchase_timestamp'].dt.date <= end_date)
 ]
 
-if selected_states:
+# Terapkan filter hanya jika dipilih oleh pengguna
+if len(selected_states) > 0:
     filtered_df = filtered_df[filtered_df['customer_state'].isin(selected_states)]
 
-if selected_segments:
+if len(selected_segments) > 0:
     filtered_df = filtered_df[filtered_df['customer_segment'].isin(selected_segments)]
 
 # Dataset level pesanan unik untuk kalkulasi metrik pesanan
@@ -165,7 +167,7 @@ order_level_df = filtered_df.drop_duplicates('order_id')
 st.title("🛍️ E-Commerce Public Analytics Dashboard")
 st.markdown("""
 Dashboard interaktif untuk eksplorasi dan visualisasi mendalam **E-Commerce Public Dataset** (Olist, Brasil), 
-fokus pada pesanan berstatus *delivered*.
+fokus pada transaksi pesanan berstatus *delivered*.
 """)
 
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -230,10 +232,10 @@ with tab1:
         rfm_summary['pct_customers'] = (rfm_summary['total_customers'] / max(tot_cust, 1)) * 100
         rfm_summary['pct_revenue'] = (rfm_summary['total_revenue'] / max(tot_rev, 1)) * 100
 
-        # --- GRAFIK 1: DUAL BAR CHART PERSIS SESUAI NOTEBOOK CELL 17 ---
+        # --- GRAFIK 1: DUAL BAR CHART (PERSIS SESUAI NOTEBOOK CELL 17) ---
         fig1, ax1 = plt.subplots(1, 2, figsize=(16, 6))
 
-        # Panel 1: Jumlah Pelanggan per Segmen
+        # Panel 1: Jumlah Pelanggan per Segmen (5 Bar)
         sns.barplot(
             data=rfm_summary, x='customer_segment', y='total_customers',
             order=rfm_summary['customer_segment'], palette=palette_rfm[:len(rfm_summary)], ax=ax1[0]
@@ -247,7 +249,7 @@ with tab1:
         ax1[0].set_ylim(0, max_cust * 1.18)
         ax1[0].tick_params(axis='x', rotation=15)
 
-        # Panel 2: Total Revenue per Segmen
+        # Panel 2: Total Revenue per Segmen (5 Bar)
         sns.barplot(
             data=rfm_summary, x='customer_segment', y='total_revenue',
             order=rfm_summary['customer_segment'], palette=palette_rfm[:len(rfm_summary)], ax=ax1[1]
@@ -287,9 +289,9 @@ with tab1:
 
         with st.expander("💡 **Insight Kunci Segmentasi RFM** (klik untuk membuka)", expanded=True):
             st.markdown("""
-- **Dominasi Segmen Berisiko (At-Risk & Lost):** Segmen *Lost Customers* dan *At Risk* mencakup lebih dari **59%** pelanggan dan menyumbang **58%** dari total omset historis. Kelompok ini rata-rata tidak aktif bertransaksi selama lebih dari 330 hari.
-- **Segmen Champions & Loyal:** Mencakup ~1,9% pelanggan, merupakan pembeli berulang dengan transaksi tertinggi dan frekuensi aktif.
-- **Peluang Retensi:** Sebanyak **97%** pelanggan hanya berbelanja satu kali (*one-time buyer*). Program insentif kupon pembelian kedua (*second-order voucher*) segera setelah pembelian pertama merupakan tuas pertumbuhan CLV yang paling efektif.
+- **Dominasi Segmen Berisiko (At Risk & Lost Customers):** Segmen *Lost Customers* (54.412 pelanggan, 58,3%) dan *At Risk* (996 pelanggan, 1,1%) secara kumulatif mencakup lebih dari **59%** basis pelanggan dan menyumbang lebih dari **58%** pendapatan historis (R$ 7,66 juta).
+- **Segmen Champions & Loyal:** Mencakup ~1,9% pelanggan, merupakan pembeli setia dengan transaksi belanja berulang dan skor moneter tertinggi.
+- **Tantangan Repeat Order:** Sebanyak **97%** pelanggan platform hanya pernah bertransaksi satu kali (*one-time buyer*). Program *retention marketing* seperti kupon diskon pesanan kedua (*second-order voucher*) menjadi kunci menjaga kelangsungan pendapatan.
             """)
 
 # =========================================================
@@ -323,14 +325,15 @@ with tab2:
     geo_balance['order_share_pct'] = (geo_balance['total_orders'] / max(tot_orders_sum, 1)) * 100
     geo_balance['seller_share_pct'] = (geo_balance['total_sellers'] / max(tot_sellers_sum, 1)) * 100
 
-    top_states = geo_balance[geo_balance['total_orders'] >= 1000].sort_values('total_orders', ascending=False)
+    # Mengambil state dengan >= 1000 pesanan (persis 12 state sesuai notebook Cell 20)
+    top_states = geo_balance[geo_balance['total_orders'] >= 1000].sort_values('total_orders', ascending=False).reset_index(drop=True)
     if top_states.empty:
-        top_states = geo_balance.sort_values('total_orders', ascending=False).head(10)
+        top_states = geo_balance.sort_values('total_orders', ascending=False).head(12).reset_index(drop=True)
 
-    # --- GRAFIK 2: DUAL SUBPLOT PERSIS SESUAI NOTEBOOK CELL 20 ---
+    # --- GRAFIK 2: DUAL SUBPLOT (PERSIS SESUAI NOTEBOOK CELL 20 - 12 BAR) ---
     fig2, ax2 = plt.subplots(1, 2, figsize=(16, 6))
 
-    # Panel 1: Jumlah Pesanan Pembeli per State
+    # Panel 1: Jumlah Pesanan Pembeli per State (12 Bar Horizontal)
     sns.barplot(data=top_states, x='total_orders', y='state', color=COLOR_MAIN, ax=ax2[0])
     ax2[0].set_title('Top State Berdasarkan Jumlah Pesanan Pembeli', fontsize=12, fontweight='bold', pad=10)
     ax2[0].set_xlabel('Jumlah Pesanan', fontsize=10)
@@ -340,7 +343,7 @@ with tab2:
         ax2[0].text(val + (max_to * 0.02), i, f"{val:,}", va='center', fontsize=9)
     ax2[0].set_xlim(0, max_to * 1.18)
 
-    # Panel 2: Porsi Pesanan Pembeli vs Porsi Penjual Aktif
+    # Panel 2: Porsi Pesanan Pembeli vs Porsi Penjual Aktif (Grouped Bar Chart - 12 Pasang Bar)
     x = np.arange(len(top_states))
     width = 0.38
     b1 = ax2[1].barh(x - width/2, top_states['order_share_pct'], width, label='% Pesanan Pembeli', color=COLOR_MAIN)
@@ -378,15 +381,15 @@ with tab2:
         with col_m1:
             st.map(map_df, latitude='lat', longitude='lon', size='total_orders', color='#4A90E2')
         with col_m2:
-            st.markdown("##### 📌 8 Negara Bagian Teratas")
-            display_map = map_df[['state', 'name', 'total_orders', 'total_sellers']].sort_values('total_orders', ascending=False).head(8).copy()
+            st.markdown("##### 📌 Negara Bagian Teratas")
+            display_map = map_df[['state', 'name', 'total_orders', 'total_sellers']].sort_values('total_orders', ascending=False).head(10).copy()
             display_map.columns = ['State', 'Nama', 'Pesanan', 'Penjual']
             st.dataframe(display_map, use_container_width=True)
 
     with st.expander("💡 **Insight Geospasial (Pembeli vs Penjual)** (klik untuk membuka)", expanded=True):
         st.markdown("""
-- **Sentralisasi di São Paulo (SP):** Menyerap **41,9%** pesanan nasional dan menampung hampir **60%** dari total penjual aktif di Brasil.
-- **Ketimpangan Pasokan Wilayah Lain:** Wilayah seperti Rio de Janeiro (RJ: 12,8% pesanan vs 5,5% penjual) dan Minas Gerais (MG: 11,8% pesanan vs 7,9% penjual) mengalami defisit pasokan lokal yang tinggi, memaksa pesanan dipenuhi dari luar wilayah yang meningkatkan waktu dan ongkos kirim.
+- **Sentralisasi di São Paulo (SP):** São Paulo (SP) menjadi pusat perniagaan e-commerce terbesar di Brasil dengan menguasai **40.494 pesanan (42,0%)** dan menampung hampir **60% penjual aktif** (1.769 penjual).
+- **Defisit Pasokan Penjual Lokal:** Wilayah seperti Rio de Janeiro (RJ: 12,8% pesanan vs 5,5% penjual) dan Minas Gerais (MG: 11,8% pesanan vs 7,9% penjual) mengalami defisit penjual lokal yang tinggi, sehingga sangat bergantung pada pengiriman lintas wilayah (*inter-state*).
         """)
 
 # =========================================================
@@ -428,10 +431,10 @@ with tab3:
             pct_positive=('review_score', lambda s: (s >= 4).mean() * 100)
         ).reset_index()
 
-        # --- GRAFIK 3: DUAL SUBPLOT PERSIS SESUAI NOTEBOOK CELL 23 ---
+        # --- GRAFIK 3: DUAL SUBPLOT (PERSIS SESUAI NOTEBOOK CELL 23) ---
         fig3, ax3 = plt.subplots(1, 2, figsize=(16, 5))
 
-        # Panel 1: Rata-rata Skor Ulasan berdasarkan Kategori Kecepatan
+        # Panel 1: Rata-rata Skor Ulasan berdasarkan Kategori Kecepatan (4 Bar)
         colors_speed = [COLOR_GOOD, '#52B788', '#F4A261', COLOR_ACCENT][:len(speed_summary)]
         bars1 = ax3[0].bar(speed_summary['speed_category'], speed_summary['avg_review'], color=colors_speed)
         ax3[0].set_title('Rata-rata Rating berdasarkan Kecepatan Pengiriman', fontsize=12, fontweight='bold', pad=10)
@@ -441,7 +444,7 @@ with tab3:
             ax3[0].text(i, val + 0.12, f"{val:.2f} ★\n({n:,} pesanan)", ha='center', fontsize=9)
         ax3[0].tick_params(axis='x', rotation=10)
 
-        # Panel 2: Dampak Keterlambatan Pengiriman
+        # Panel 2: Dampak Keterlambatan Pengiriman (2 Bar)
         late_labels = ['Tepat Waktu / Lebih Awal', 'Terlambat vs Estimasi']
         colors_late = [COLOR_GOOD, COLOR_ACCENT][:len(late_summary)]
         bars2 = ax3[1].bar(late_labels[:len(late_summary)], late_summary['avg_review'], color=colors_late, width=0.5)
@@ -459,8 +462,8 @@ with tab3:
 
         with st.expander("💡 **Insight Hubungan Pengiriman & Kepuasan** (klik untuk membuka)", expanded=True):
             st.markdown("""
-- **Penalti Keterlambatan Estimasi:** Keterlambatan melewati tanggal estimasi adalah faktor utama perusak rating, di mana skor kepuasan anjlok dari **4,29 menjadi 2,57** dan rasio ulasan positif merosot dari **82,3% menjadi hanya 33,8%**.
-- **Ambang Batas Kecepatan:** Pengiriman di bawah 14 hari menghasilkan rating sangat memuaskan di atas 4,3 bintang. Penurunan rating mulai terasa signifikan ketika durasi pengiriman melampaui 21 hari (turun ke 3,12 bintang).
+- **Penalti Keterlambatan Estimasi:** Pesanan yang datang tepat waktu mendapatkan skor rating tinggi **4,29 ★** dengan **82,3% ulasan positif** (88.644 pesanan). Sebaliknya, pesanan yang terlambat melewati estimasi mengalami penurunan kepuasan drastis ke **2,57 ★** dengan hanya **33,8% ulasan positif** (7.826 pesanan).
+- **Batas Kritis Durasi:** Rata-rata kepuasan tetap sangat baik pada durasi *Fast* (<=7 hari: 4,42 ★) dan *Normal* (8-14 hari: 4,31 ★). Kepuasan mulai anjlok tajam saat pengiriman memakan waktu *Very Slow* (>21 hari: 3,12 ★).
             """)
 
 # =========================================================
@@ -486,10 +489,10 @@ with tab4:
         top_volume = prod_perf.sort_values('total_orders', ascending=False).head(10)
         bottom_revenue = prod_perf.sort_values('total_revenue', ascending=True).head(10)
 
-        # --- GRAFIK 4A: TOP 10 REVENUE & ORDER VOLUME PERSIS SESUAI NOTEBOOK CELL 26 ---
+        # --- GRAFIK 4A: TOP 10 REVENUE & ORDER VOLUME (PERSIS SESUAI NOTEBOOK CELL 26) ---
         fig4a, ax4a = plt.subplots(1, 2, figsize=(16, 6))
 
-        # Panel Kiri: Top 10 Revenue
+        # Panel Kiri: Top 10 Revenue (10 Bar)
         sns.barplot(data=top_revenue, x='total_revenue', y='product_category', color=COLOR_MAIN, ax=ax4a[0])
         ax4a[0].set_title('Top 10 Kategori Berdasarkan Revenue (BRL)', fontsize=12, fontweight='bold', pad=10)
         ax4a[0].set_xlabel('Total Revenue (R$)', fontsize=10)
@@ -500,7 +503,7 @@ with tab4:
         ax4a[0].set_xlim(0, max_rev * 1.3)
         ax4a[0].ticklabel_format(style='plain', axis='x')
 
-        # Panel Kanan: Top 10 Volume Pesanan
+        # Panel Kanan: Top 10 Volume Pesanan (10 Bar)
         sns.barplot(data=top_volume, x='total_orders', y='product_category', color=COLOR_GOOD, ax=ax4a[1])
         ax4a[1].set_title('Top 10 Kategori Berdasarkan Volume Pesanan', fontsize=12, fontweight='bold', pad=10)
         ax4a[1].set_xlabel('Jumlah Pesanan', fontsize=10)
@@ -514,11 +517,11 @@ with tab4:
         st.pyplot(fig4a)
         plt.close(fig4a)
 
-        # --- GRAFIK 4B: BOTTOM 10 REVENUE ---
-        st.subheader("⚠️ Bottom 10 Kategori Berdasarkan Revenue")
+        # --- GRAFIK 4B: BOTTOM 10 REVENUE (PERSIS SESUAI NOTEBOOK CELL 26 - 10 BAR) ---
+        st.subheader("⚠️ Bottom 10 Kategori Berdasarkan Revenue Terendah")
         fig4b, ax4b = plt.subplots(figsize=(11, 4.5))
         sns.barplot(data=bottom_revenue, x='total_revenue', y='product_category', color=COLOR_ACCENT, ax=ax4b)
-        ax4b.set_title('Bottom 10 Kategori Berdasarkan Revenue (R$)', fontsize=12, fontweight='bold', pad=10)
+        ax4b.set_title('Bottom 10 Kategori Berdasarkan Revenue', fontsize=12, fontweight='bold', pad=10)
         ax4b.set_xlabel('Total Revenue (R$)', fontsize=10)
         ax4b.set_ylabel('Kategori Produk', fontsize=10)
         max_bot = bottom_revenue['total_revenue'].max()
@@ -532,8 +535,9 @@ with tab4:
 
         with st.expander("💡 **Insight Kinerja Kategori Produk** (klik untuk membuka)", expanded=True):
             st.markdown("""
-- **Kategori Unggulan Omset:** Kategori *Health Beauty* (R$ 1,23 juta), *Watches Gifts* (R$ 1,17 juta), dan *Bed Bath Table* (R$ 1,02 juta) menduduki 3 besar penopang pendapatan platform.
-- **Kategori Bernilai Tinggi:** Kategori *Watches Gifts* memiliki volume pesanan moderat namun menghasilkan nilai revenue sangat tinggi karena harga rata-rata item yang besar.
+- **Top 3 Kontributor Omset:** *Health Beauty* (R$ 1.233.132), *Watches Gifts* (R$ 1.165.899), dan *Bed Bath Table* (R$ 1.023.435) menjadi tiga kategori utama yang masing-masing melampaui R$ 1 juta.
+- **Nilai per Pesanan Tinggi:** Kategori *Watches Gifts* berada pada posisi ke-7 dalam volume pesanan (5.493 pesanan) namun berada di peringkat ke-2 dalam perolehan revenue karena nilai rata-rata belanja yang tinggi per item.
+- **Bottom 10 Kategori:** Kategori seperti *Security And Services* (R$ 283; 2 pesanan) dan *Fashion Childrens Clothes* (R$ 520; 7 pesanan) menyumbangkan porsi revenue yang sangat kecil (< 0,1%).
             """)
 
 # =========================================================
@@ -582,10 +586,10 @@ with tab5:
             avg_order_value=('total_payment_value', 'mean')
         ).reindex(inst_order).dropna(subset=['total_orders']).reset_index()
 
-        # --- GRAFIK 5: DUAL SUBPLOT PERSIS SESUAI NOTEBOOK CELL 29 ---
+        # --- GRAFIK 5: DUAL SUBPLOT (PERSIS SESUAI NOTEBOOK CELL 29) ---
         fig5, ax5 = plt.subplots(1, 2, figsize=(16, 6))
 
-        # Panel 1: Porsi Pesanan vs Porsi Nilai Transaksi
+        # Panel 1: Porsi Pesanan vs Porsi Nilai Transaksi per Metode (4 Pasang Bar)
         labels = pay_summary['primary_payment_type'].str.replace('_', ' ').str.title()
         x = np.arange(len(pay_summary))
         width = 0.38
@@ -600,7 +604,7 @@ with tab5:
         ax5[0].set_ylim(0, 88)
         ax5[0].legend()
 
-        # Panel 2: AOV Berdasarkan Kelompok Tenor Cicilan
+        # Panel 2: AOV Berdasarkan Kelompok Tenor Cicilan (5 Bar)
         bars_inst = ax5[1].bar(installment_summary['installment_group'].astype(str), installment_summary['avg_order_value'], color=COLOR_MAIN)
         ax5[1].set_title('Rata-rata Nilai Belanja (AOV) berdasarkan Tenor Cicilan', fontsize=12, fontweight='bold', pad=10)
         ax5[1].set_xlabel('Kelompok Tenor Cicilan', fontsize=10)
@@ -616,8 +620,8 @@ with tab5:
 
         with st.expander("💡 **Insight Metode Pembayaran & Cicilan** (klik untuk membuka)", expanded=True):
             st.markdown("""
-- **Dominasi Kartu Kredit:** Kartu kredit mencakup **75,5%** dari total pesanan dan **78,5%** dari total nilai transaksi.
-- **Efek Pendorong Cicilan (Installment Uplift):** Pembeli yang memilih tenor cicilan lebih dari 10 kali memiliki rata-rata nilai belanja mencapai R$ 361, jauh melampaui transaksi bayar penuh 1 kali (R$ 101).
+- **Dominasi Kartu Kredit:** Kartu kredit menjadi instrumen utama pada **72.818 pesanan (75,5%)** dan menyerap **78,5% total nilai pembayaran** (R$ 12,10 juta).
+- **Efek Pendorong Cicilan (Installment Uplift):** Terdapat korelasi positif yang nyata antara panjang tenor cicilan dengan nilai transaksi. Pembeli dengan cicilan >10x mencatatkan AOV sebesar **R$ 361**, meningkat 3,6 kali lipat dibandingkan transaksi 1x bayar penuh (R$ 101).
             """)
 
 # =========================================================
@@ -636,17 +640,17 @@ with tab6:
    * Pelanggan didominasi pembeli satu kali (*one-time buyers*, ~97%).
    * Segmen berisiko (*At Risk* dan *Lost Customers*) mencakup lebih dari **59%** basis pelanggan dan menyumbangkan lebih dari separuh pendapatan historis perusahaan.
 2. **Distribusi Geospasial Pasar:**
-   * Konsentrasi ekonomi sangat kuat di São Paulo (SP) yang menyerap **41,9%** pesanan nasional dan menampung hampir 60% penjual aktif.
+   * Konsentrasi ekonomi sangat kuat di São Paulo (SP) yang menyerap **42,0%** pesanan nasional (40.494 pesanan) dan menampung hampir 60% penjual aktif.
    * Negara bagian lain (RJ, MG, RS) mengalami defisit penjual lokal yang tinggi sehingga bergantung pada pengiriman lintas wilayah.
 3. **Durasi Pengiriman & Kepuasan:**
-   * Ketepatan waktu terhadap estimasi adalah faktor penentu utama: pesanan tepat waktu meraih rating rata-rata **4,29**, sedangkan pesanan terlambat anjlok ke **2,57**.
+   * Ketepatan waktu terhadap estimasi adalah faktor penentu utama: pesanan tepat waktu meraih rating rata-rata **4,29 ★**, sedangkan pesanan terlambat anjlok ke **2,57 ★**.
    * Durasi pengiriman di bawah 14 hari menghasilkan kepuasan stabil di atas 4,3 bintang.
 4. **Kinerja Kategori Produk:**
    * Tiga kategori penopang omset utama adalah *Health Beauty*, *Watches Gifts*, dan *Bed Bath Table*.
    * Kategori bernilai tinggi seperti *Watches Gifts* memiliki AOV tinggi meskipun volumenya moderat.
 5. **Metode Pembayaran & Cicilan:**
-   * Kartu kredit mendominasi 75,5% pesanan.
-   * Fasilitas cicilan terbukti efektif melipatgandakan *basket size* belanja (AOV cicilan >10x mencapai 3,3 kali lipat dibanding bayar penuh).
+   * Kartu kredit mendominasi 75,5% pesanan dan 78,5% nilai transaksi.
+   * Fasilitas cicilan terbukti efektif melipatgandakan *basket size* belanja (AOV cicilan >10x mencapai R$ 361 dibanding R$ 101 pada pembayaran penuh).
         """)
 
     with col_c2:
