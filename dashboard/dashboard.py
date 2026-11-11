@@ -14,25 +14,20 @@ import streamlit as st
 warnings.filterwarnings('ignore')
 
 # ---------------------------------------------------------
-# KONFIGURASI TEMA & PALET WARNA (identik dengan notebook)
+# KONFIGURASI TEMA & PALET WARNA (sama dengan notebook)
 # ---------------------------------------------------------
 sns.set_theme(style='whitegrid')
 plt.rcParams['font.size'] = 10
 
-COLOR_MAIN = '#4A90E2'      # Biru: nilai utama / pembeli
-COLOR_ACCENT = '#E63946'    # Merah: risiko / perhatian
-COLOR_GOOD = '#2A9D8F'      # Hijau toska: performa tinggi / kepuasan
-COLOR_NEUTRAL = '#B8C0CC'   # Abu-abu: netral
+# Prinsip visualisasi: satu warna dasar (muda) + warna lebih tua untuk menyorot bar utama
+BLUE_BASE, BLUE_DARK = '#A9C8EE', '#1F4E8C'   # Pertanyaan 1 & 3
+RED_BASE, RED_DARK = '#F2B5B5', '#C1121F'     # Pertanyaan 2 (sorotan = titik masalah)
 
 SEGMENT_ORDER = ['Champions', 'Loyal Customers', 'Potential Loyalists',
                  'At-Risk / Need Attention', 'Lost Customers']
-SEGMENT_COLORS = dict(zip(SEGMENT_ORDER, [COLOR_GOOD, '#52B788', COLOR_MAIN, '#F4A261', COLOR_ACCENT]))
-
 SPEED_ORDER = ['Fast (<=7 hari)', 'Normal (8-14 hari)', 'Slow (15-21 hari)', 'Very Slow (>21 hari)']
-SPEED_COLORS = dict(zip(SPEED_ORDER, [COLOR_GOOD, '#52B788', '#F4A261', COLOR_ACCENT]))
 
 LATE_LABELS = {False: 'Tepat Waktu / Lebih Awal', True: 'Terlambat vs Estimasi'}
-LATE_COLORS = {False: COLOR_GOOD, True: COLOR_ACCENT}
 
 INST_ORDER = ['1x (Bayar Penuh)', '2-3x', '4-6x', '7-10x', '>10x']
 
@@ -147,37 +142,41 @@ def summarize_payment(df):
 # ---------------------------------------------------------
 # GRAFIK (kode plotting disalin dari sel visualisasi notebook)
 # ---------------------------------------------------------
+def highlight_colors(n, idx, base, highlight):
+    """Semua bar berwarna dasar, hanya bar ke-idx yang berwarna lebih tua."""
+    return [highlight if i == idx else base for i in range(n)]
+
+
 def plot_rfm(rfm_summary):
     fig, ax = plt.subplots(1, 2, figsize=(16, 6))
-    order = rfm_summary['customer_segment']
-    palette_rfm = [SEGMENT_COLORS[s] for s in order]
+    seg = rfm_summary['customer_segment']
 
-    # Panel 1: Jumlah Pelanggan per Segmen
-    sns.barplot(data=rfm_summary, x='customer_segment', y='total_customers',
-                hue='customer_segment', order=order, palette=palette_rfm,
-                legend=False, ax=ax[0])
+    # Panel 1: Jumlah Pelanggan per Segmen (sorot segmen terbanyak)
+    vals = rfm_summary['total_customers'].values
+    ax[0].bar(seg, vals, color=highlight_colors(len(vals), vals.argmax(), BLUE_BASE, BLUE_DARK))
     ax[0].set_title('Distribusi Jumlah Pelanggan per Segmen RFM', fontsize=13, fontweight='bold', pad=12)
     ax[0].set_xlabel('Segmen Pelanggan', fontsize=11)
     ax[0].set_ylabel('Jumlah Pelanggan', fontsize=11)
-    max_c = rfm_summary['total_customers'].max()
-    for i, (val, pct) in enumerate(zip(rfm_summary['total_customers'], rfm_summary['pct_customers'])):
+    max_c = vals.max()
+    for i, (val, pct) in enumerate(zip(vals, rfm_summary['pct_customers'])):
         ax[0].text(i, val + (max_c * 0.02), f"{val:,}\n({pct:.1f}%)", ha='center', fontsize=9.5, fontweight='bold')
     ax[0].set_ylim(0, max_c * 1.18)
     ax[0].tick_params(axis='x', rotation=15)
 
-    # Panel 2: Total Revenue per Segmen
-    sns.barplot(data=rfm_summary, x='customer_segment', y='total_revenue',
-                hue='customer_segment', order=order, palette=palette_rfm,
-                legend=False, ax=ax[1])
+    # Panel 2: Total Revenue per Segmen (sorot segmen dengan revenue terbesar)
+    rev = rfm_summary['total_revenue'].values
+    ax[1].bar(seg, rev, color=highlight_colors(len(rev), rev.argmax(), BLUE_BASE, BLUE_DARK))
     ax[1].set_title('Kontribusi Pendapatan per Segmen RFM (BRL)', fontsize=13, fontweight='bold', pad=12)
     ax[1].set_xlabel('Segmen Pelanggan', fontsize=11)
     ax[1].set_ylabel('Total Revenue (R$)', fontsize=11)
-    max_r = rfm_summary['total_revenue'].max()
-    for i, (val, pct) in enumerate(zip(rfm_summary['total_revenue'], rfm_summary['pct_revenue'])):
+    max_r = rev.max()
+    for i, (val, pct) in enumerate(zip(rev, rfm_summary['pct_revenue'])):
         ax[1].text(i, val + (max_r * 0.02), f"R$ {val:,.0f}\n({pct:.1f}%)", ha='center', fontsize=9.5, fontweight='bold')
     ax[1].set_ylim(0, max_r * 1.18)
     ax[1].tick_params(axis='x', rotation=15)
 
+    for a in ax:
+        a.grid(axis='x', visible=False)
     plt.tight_layout()
     return fig
 
@@ -185,27 +184,30 @@ def plot_rfm(rfm_summary):
 def plot_delivery(speed_summary, late_summary):
     fig, ax = plt.subplots(1, 2, figsize=(16, 5))
 
-    # Panel 1: Rata-rata Skor Ulasan berdasarkan Kategori Kecepatan
-    colors_speed = [SPEED_COLORS[c] for c in speed_summary['speed_category']]
-    ax[0].bar(speed_summary['speed_category'], speed_summary['avg_review'], color=colors_speed)
+    # Panel 1: Rating per Kategori Kecepatan (sorot rating terendah)
+    rating = speed_summary['avg_review'].values
+    ax[0].bar(speed_summary['speed_category'], rating,
+              color=highlight_colors(len(rating), rating.argmin(), RED_BASE, RED_DARK))
     ax[0].set_title('Rata-rata Rating berdasarkan Kecepatan Pengiriman', fontsize=13, fontweight='bold', pad=12)
     ax[0].set_ylabel('Rata-rata Skor Ulasan (Skala 1 - 5)', fontsize=11)
     ax[0].set_ylim(0, 5.2)
-    for i, (val, n) in enumerate(zip(speed_summary['avg_review'], speed_summary['total_orders'])):
+    for i, (val, n) in enumerate(zip(rating, speed_summary['total_orders'])):
         ax[0].text(i, val + 0.12, f"{val:.2f} ★\n({n:,} pesanan)", ha='center', fontsize=9.5, fontweight='bold')
     ax[0].tick_params(axis='x', rotation=10)
 
-    # Panel 2: Dampak Keterlambatan Pengiriman vs Estimasi
-    colors_late = [LATE_COLORS[b] for b in late_summary['is_late_vs_estimate']]
-    ax[1].bar(late_summary['status_label'], late_summary['avg_review'], color=colors_late, width=0.5)
+    # Panel 2: Dampak Keterlambatan vs Estimasi (sorot kelompok dengan rating terendah)
+    rating_l = late_summary['avg_review'].values
+    ax[1].bar(late_summary['status_label'], rating_l,
+              color=highlight_colors(len(rating_l), rating_l.argmin(), RED_BASE, RED_DARK), width=0.5)
     ax[1].set_title('Pengaruh Keterlambatan Estimasi terhadap Kepuasan', fontsize=13, fontweight='bold', pad=12)
     ax[1].set_ylabel('Rata-rata Skor Ulasan (Skala 1 - 5)', fontsize=11)
     ax[1].set_ylim(0, 5.2)
-    for i, (val, n, pct) in enumerate(zip(late_summary['avg_review'], late_summary['total_orders'],
-                                          late_summary['pct_positive'])):
+    for i, (val, n, pct) in enumerate(zip(rating_l, late_summary['total_orders'], late_summary['pct_positive'])):
         ax[1].text(i, val + 0.12, f"{val:.2f} ★\n{pct:.1f}% ulasan positif\n({n:,} pesanan)",
                    ha='center', fontsize=9.5, fontweight='bold')
 
+    for a in ax:
+        a.grid(axis='x', visible=False)
     plt.tight_layout()
     return fig
 
@@ -213,14 +215,14 @@ def plot_delivery(speed_summary, late_summary):
 def plot_payment(payment_summary, installment_summary):
     fig, ax = plt.subplots(1, 2, figsize=(16, 6))
 
-    # Panel 1: Pangsa Pesanan vs Pangsa Nilai Transaksi per Metode
+    # Panel 1: Pangsa Pesanan (biru muda) vs Pangsa Nilai Transaksi (biru tua)
     labels_pay = payment_summary['primary_payment_type'].str.replace('_', ' ').str.title()
     x_pos = np.arange(len(payment_summary))
     width = 0.38
     b1 = ax[0].bar(x_pos - width / 2, payment_summary['order_share_pct'], width,
-                   label='% Jumlah Pesanan', color=COLOR_MAIN)
+                   label='% Jumlah Pesanan', color=BLUE_BASE)
     b2 = ax[0].bar(x_pos + width / 2, payment_summary['value_share_pct'], width,
-                   label='% Nilai Transaksi', color=COLOR_GOOD)
+                   label='% Nilai Transaksi', color=BLUE_DARK)
     ax[0].set_xticks(x_pos)
     ax[0].set_xticklabels(labels_pay)
     ax[0].set_ylabel('Persentase terhadap Total (%)', fontsize=11)
@@ -228,22 +230,25 @@ def plot_payment(payment_summary, installment_summary):
     ax[0].bar_label(b1, fmt='%.1f%%', padding=3, fontsize=9.5, fontweight='bold')
     ax[0].bar_label(b2, fmt='%.1f%%', padding=3, fontsize=9.5, fontweight='bold')
     y_top = max(payment_summary['order_share_pct'].max(), payment_summary['value_share_pct'].max())
-    ax[0].set_ylim(0, max(88, y_top * 1.11))   # 88 = nilai pada notebook
+    ax[0].set_ylim(0, max(88, y_top * 1.11))
     ax[0].legend()
 
-    # Panel 2: AOV berdasarkan Kelompok Tenor Cicilan
-    ax[1].bar(installment_summary['installment_group'], installment_summary['avg_order_value'], color=COLOR_MAIN)
+    # Panel 2: AOV per Tenor Cicilan (sorot AOV tertinggi)
+    aov_vals = installment_summary['avg_order_value'].values
+    ax[1].bar(installment_summary['installment_group'], aov_vals,
+              color=highlight_colors(len(aov_vals), aov_vals.argmax() if len(aov_vals) else -1, BLUE_BASE, BLUE_DARK))
     ax[1].set_title('Rata-rata Nilai Belanja (AOV) berdasarkan Tenor Cicilan', fontsize=13, fontweight='bold', pad=12)
     ax[1].set_xlabel('Kelompok Tenor Cicilan Kartu Kredit', fontsize=11)
     ax[1].set_ylabel('Average Order Value (R$)', fontsize=11)
-    if not installment_summary.empty:
-        max_aov = installment_summary['avg_order_value'].max()
-        for i, (aov, n) in enumerate(zip(installment_summary['avg_order_value'],
-                                         installment_summary['total_orders'])):
+    if len(aov_vals):
+        max_aov = aov_vals.max()
+        for i, (aov, n) in enumerate(zip(aov_vals, installment_summary['total_orders'])):
             ax[1].text(i, aov + (max_aov * 0.02), f"R$ {aov:,.0f}\n({n:,})",
                        ha='center', fontsize=9.5, fontweight='bold')
         ax[1].set_ylim(0, max_aov * 1.22)
 
+    for a in ax:
+        a.grid(axis='x', visible=False)
     plt.tight_layout()
     return fig
 
