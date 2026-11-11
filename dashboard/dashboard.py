@@ -343,7 +343,7 @@ def main():
         st.markdown('''
         * **Nama:** Dewa Bagus Pradnyana Cahyadi Putra  
         * **Email:** pradnyana08@gmail.com  
-        * **Dicoding ID:** `ds014b6y0434`
+        * **Dicoding ID:** `dewa_bagus_pradnjv3s`
         ''')
         st.markdown('---')
         st.subheader('⚙️ Filter Interaktif')
