@@ -254,9 +254,11 @@ def section_payment(df):
     # Filter metode pembayaran: hanya memengaruhi grafik kiri dan tabel di bagian ini
     selected_methods = st.multiselect(
         "Metode pembayaran yang ditampilkan (hanya memengaruhi grafik porsi pesanan dan tabel)",
-        options=list(summary.index), default=list(summary.index),
+        options=list(summary.index), default=[], placeholder="Semua metode pembayaran",
         format_func=lambda m: PAYMENT_LABELS.get(m, m),
     )
+    if not selected_methods:
+        selected_methods = list(summary.index)
     shown = summary.loc[summary.index.isin(selected_methods)]
 
     cc = pay[pay["installment_group"].notna()]
