@@ -53,6 +53,10 @@ def load_data():
 
 def sidebar_filters(df):
     """Filter global di sidebar: berlaku untuk SEMUA bagian dashboard."""
+    st.sidebar.markdown("**Nama:** Dewa Bagus Pradnyana Cahyadi Putra")
+    st.sidebar.markdown("**Email:** pradnyana08@gmail.com")
+    st.sidebar.markdown("**ID Dicoding:** `dewa_bagus_pradnjv3s`")
+    st.sidebar.markdown("---")
     st.sidebar.header("Filter Data")
     st.sidebar.caption("Filter ini berlaku untuk seluruh visualisasi di dashboard.")
 
