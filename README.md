@@ -4,7 +4,7 @@
 - **Email:** pradnyana08@gmail.com
 - **ID Dicoding:** dewa_bagus_pradnjv3s
 
-Proyek ini menganalisis *E-Commerce Public Dataset* (transaksi marketplace di Brasil) pada pesanan berstatus *delivered* periode 15 September 2016 - 29 Agustus 2018 (96.470 pesanan dan 93.350 pelanggan unik). Hasil analisis disajikan dalam notebook dan dashboard Streamlit interaktif.
+Proyek ini menganalisis *E-Commerce Public Dataset* (transaksi marketplace di Brasil) pada pesanan berstatus *delivered* periode 15 September 2016 - 29 Agustus 2018 (96.470 pesanan dan 93.350 pelanggan unik). Hasil analisis disajikan dalam notebook dan dashboard Streamlit interaktif. Seluruh nilai uang dalam Brazilian Real (R$).
 
 ## Pertanyaan Bisnis
 
@@ -14,9 +14,9 @@ Proyek ini menganalisis *E-Commerce Public Dataset* (transaksi marketplace di Br
 
 ## Ringkasan Temuan
 
-- Hanya 3,0% pelanggan yang pernah membeli ulang. Segmen berisiko (*At-Risk* dan *Lost*) mencakup 40,0% pelanggan dan 40,2% revenue.
-- Pesanan yang melewati tanggal estimasi berskor 2,57, dibanding 4,29 pada pesanan yang tepat waktu (selisih 1,73 poin). Penurunan skor menurut durasi paling tajam setelah 21 hari.
-- Kartu kredit menguasai 75,5% pesanan dan 78,5% nilai transaksi. AOV kartu kredit naik dari R$ 101 (tanpa cicilan) menjadi R$ 333 (cicilan 7-10x). Hasil ini menunjukkan hubungan, bukan bukti sebab-akibat.
+- **Segmentasi RFM:** segmen terbesar adalah *Recent Mid-High Spenders* (33.087 pelanggan; 35,44%) dengan kontribusi revenue 50,94%. Segmen berisiko (*At-Risk / Need Attention* dan *Lost Customers*) mencakup 37.340 pelanggan (40,00%) dan 40,24% revenue. Hanya 2.801 pelanggan (3,00%) yang pernah membeli lebih dari sekali.
+- **Durasi pengiriman dan ulasan:** rata-rata skor ulasan turun dari 4,41 (≤ 7 hari) menjadi 4,29 (8-14 hari), 4,10 (15-21 hari), dan 3,01 (> 21 hari). Pesanan yang melewati tanggal estimasi berskor 2,27, dibanding 4,29 pada pesanan yang tepat waktu atau lebih awal (selisih 2,02 poin).
+- **Metode pembayaran dan cicilan:** kartu kredit menguasai 75,48% pesanan dan 78,47% nilai transaksi. AOV kartu kredit naik dari R$ 100,62 (tanpa cicilan) menjadi R$ 333,47 (cicilan 7-10x). Hasil ini menunjukkan hubungan, bukan bukti sebab-akibat.
 
 ## Struktur Folder
 
@@ -27,29 +27,33 @@ submission
 │   └── main_data.csv
 ├── data
 │   ├── customers_dataset.csv
+│   ├── geolocation_dataset.csv
 │   ├── order_items_dataset.csv
 │   ├── order_payments_dataset.csv
 │   ├── order_reviews_dataset.csv
-│   └── orders_dataset.csv
+│   ├── orders_dataset.csv
+│   ├── product_category_name_translation.csv
+│   ├── products_dataset.csv
+│   └── sellers_dataset.csv
 ├── notebook.ipynb
 ├── README.md
 ├── requirements.txt
 └── url.txt
 ```
 
-- `data/` berisi dataset mentah yang dibaca oleh notebook (cukup lima berkas di atas).
-- `dashboard/main_data.csv` dihasilkan oleh sel terakhir `notebook.ipynb`.
-- `url.txt` berisi tautan dashboard jika sudah di-deploy (opsional).
+- `data/` berisi dataset asli. Notebook hanya membaca lima berkas: `orders`, `customers`, `order_items`, `order_reviews`, dan `order_payments`. Empat berkas lainnya (`geolocation`, `products`, `product_category_name_translation`, `sellers`) tidak dibutuhkan oleh ketiga pertanyaan bisnis.
+- `dashboard/main_data.csv` (96.470 baris, 17 kolom, satu baris per pesanan) dihasilkan oleh sel terakhir `notebook.ipynb` dan hanya memuat kolom yang dibutuhkan dashboard.
+- `url.txt` berisi tautan dashboard yang sudah di-deploy.
 
 ## Menjalankan Notebook
 
-1. Letakkan dataset pada folder `data/` dan pastikan library pada `requirements.txt` sudah terpasang.
-2. Buka `notebook.ipynb` (Jupyter, VS Code, atau Google Colab), lalu jalankan seluruh sel dari atas ke bawah.
+1. Pastikan dataset berada di folder `data/` dan library pada `requirements.txt` sudah terpasang (lihat langkah 1 pada bagian dashboard di bawah). Untuk menjalankan notebook di lokal, pasang juga Jupyter: `pip install jupyter`.
+2. Buka `notebook.ipynb` (Jupyter, VS Code, atau Google Colab), lalu jalankan seluruh sel dari atas ke bawah. Jika memakai Google Colab, unggah folder `data/` terlebih dahulu.
 3. Sel terakhir membuat ulang `dashboard/main_data.csv`.
 
 ## Menjalankan Dashboard Streamlit di Lokal
 
-1. Siapkan lingkungan dan pasang library:
+1. Siapkan lingkungan (proyek ini diuji pada Python 3.13) dan pasang library:
 
    ```bash
    python -m venv venv
@@ -60,21 +64,24 @@ submission
 
    Jika memakai Anaconda: `conda create --name main-ds python=3.11`, `conda activate main-ds`, lalu `pip install -r requirements.txt`.
 
-2. Jalankan dashboard dari folder utama proyek:
+2. Jalankan dashboard dari folder utama proyek (folder yang berisi `requirements.txt`):
 
    ```bash
    streamlit run dashboard/dashboard.py
    ```
 
+   Dashboard membaca `main_data.csv` relatif terhadap lokasi `dashboard.py`, sehingga tetap berjalan jika dipanggil dari folder lain, misalnya `streamlit run path/ke/submission/dashboard/dashboard.py`.
+
 3. Buka alamat yang tampil di terminal (biasanya `http://localhost:8501`).
 
 ## Fitur Dashboard
 
-- **Ringkasan:** total pesanan, pelanggan unik, total revenue, dan rata-rata skor ulasan.
+- **Ringkasan:** total pesanan, pelanggan unik, total revenue (harga barang), dan rata-rata skor ulasan.
 - **Filter negara bagian pembeli (sidebar):** berlaku untuk seluruh visualisasi di dashboard.
-- **Tab Segmentasi Pelanggan (RFM):** jumlah pelanggan dan kontribusi revenue per segmen, serta tabel ringkasan.
-- **Tab Durasi Pengiriman & Ulasan:** rata-rata skor ulasan per kelompok durasi dan per status ketepatan terhadap estimasi.
-- **Tab Metode Pembayaran & Cicilan:** porsi pesanan dan nilai transaksi per metode, serta AOV kartu kredit per kelompok cicilan. Filter metode pembayaran berada di dalam tab ini karena hanya memengaruhi grafik porsi dan tabel di tab tersebut.
+- **Tab Segmentasi Pelanggan (RFM):** persentase pelanggan dan revenue segmen berisiko, persentase pelanggan yang pernah membeli ulang, jumlah pelanggan dan kontribusi revenue per segmen, serta tabel ringkasan.
+- **Tab Durasi Pengiriman & Ulasan:** rata-rata skor ulasan per kelompok durasi dan per status ketepatan terhadap estimasi, serta selisih skornya.
+- **Tab Metode Pembayaran & Cicilan:** porsi pesanan dan nilai transaksi per metode, serta AOV kartu kredit per kelompok cicilan. Filter metode pembayaran berada di dalam tab ini karena hanya memengaruhi grafik porsi dan tabel di tab tersebut. Grafik AOV per kelompok cicilan tidak dipengaruhi filter metode pembayaran ini (tetap menampilkan seluruh pesanan kartu kredit pada negara bagian yang dipilih).
+- **Format angka:** metrik, tabel, dan keterangan memakai dua desimal seperti output notebook. Label di dalam grafik memakai satu desimal untuk persen dan bilangan bulat untuk nilai R$, seperti pada grafik di notebook.
 
 ## Deploy ke Streamlit Community Cloud (Opsional)
 
