@@ -6,9 +6,7 @@ import pandas as pd
 import streamlit as st
 from matplotlib.ticker import FuncFormatter
 
-# ---------------------------------------------------------------------------
 # Konfigurasi halaman dan konstanta
-# ---------------------------------------------------------------------------
 st.set_page_config(page_title="Dashboard Analisis E-Commerce", page_icon=":bar_chart:", layout="wide")
 
 BLUE_BASE, BLUE_DARK = "#A9C8EE", "#1F4E8C"
@@ -24,16 +22,27 @@ PAYMENT_LABELS = {"credit_card": "Credit Card", "boleto": "Boleto",
 
 # ---------------------------------------------------------------------------
 # Fungsi bantu format angka (pemisah ribuan titik, desimal koma)
+#
+# Aturan presisi agar angka dashboard sama dengan notebook:
+# - Metrik, tabel, dan caption memakai 2 desimal, seperti output teks notebook.
+# - Label di dalam grafik memakai 1 desimal untuk persen dan bilangan bulat untuk
+#   nilai rupiah, seperti label pada grafik di notebook.
 # ---------------------------------------------------------------------------
 def fmt_int(x):
+    if pd.isna(x):
+        return "-"
     return f"{x:,.0f}".replace(",", ".")
 
 
 def fmt_dec(x, digits=2):
+    if pd.isna(x):
+        return "-"
     return f"{x:,.{digits}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def fmt_pct(x, digits=1):
+def fmt_pct(x, digits=2):
+    if pd.isna(x):
+        return "-"
     return fmt_dec(x, digits) + "%"
 
 
@@ -41,10 +50,7 @@ def highlight_colors(n, idx, base, highlight):
     """Semua bar berwarna dasar, hanya bar ke-idx yang disorot."""
     return [highlight if i == idx else base for i in range(n)]
 
-
-# ---------------------------------------------------------------------------
 # Memuat dan menyaring data
-# ---------------------------------------------------------------------------
 @st.cache_data(show_spinner="Memuat data...")
 def load_data():
     data_path = Path(__file__).parent / "main_data.csv"
@@ -69,9 +75,8 @@ def sidebar_filters(df):
     return df.copy()
 
 
-# ---------------------------------------------------------------------------
+
 # Bagian 1: Segmentasi pelanggan (RFM)
-# ---------------------------------------------------------------------------
 def section_rfm(df):
     st.subheader("Segmentasi Pelanggan Berdasarkan RFM")
     st.caption(
@@ -112,7 +117,7 @@ def section_rfm(df):
     ax[0].set_xlabel("Segmen Pelanggan")
     ax[0].set_ylabel("Jumlah Pelanggan Unik")
     for i, (val, pct) in enumerate(zip(counts, summary["pct_customers"])):
-        ax[0].text(i, val + counts.max() * 0.02, f"{fmt_int(val)}\n({fmt_pct(pct)})", ha="center", fontsize=8.5, fontweight="bold")
+        ax[0].text(i, val + counts.max() * 0.02, f"{fmt_int(val)}\n({fmt_pct(pct, 1)})", ha="center", fontsize=8.5, fontweight="bold")
     ax[0].set_ylim(0, counts.max() * 1.2 if counts.max() > 0 else 1)
 
     revenue = summary["total_revenue"].values
@@ -121,7 +126,7 @@ def section_rfm(df):
     ax[1].set_xlabel("Segmen Pelanggan")
     ax[1].set_ylabel("Total Revenue (R$)")
     for i, (val, pct) in enumerate(zip(revenue, summary["pct_revenue"])):
-        ax[1].text(i, val + revenue.max() * 0.02, f"R$ {fmt_int(val)}\n({fmt_pct(pct)})", ha="center", fontsize=8.5, fontweight="bold")
+        ax[1].text(i, val + revenue.max() * 0.02, f"R$ {fmt_int(val)}\n({fmt_pct(pct, 1)})", ha="center", fontsize=8.5, fontweight="bold")
     ax[1].set_ylim(0, revenue.max() * 1.2 if revenue.max() > 0 else 1)
 
     for a in ax:
@@ -142,7 +147,7 @@ def section_rfm(df):
             "Segmen": summary.index,
             "Jumlah Pelanggan": summary["total_customers"].map(fmt_int).values,
             "% Pelanggan": summary["pct_customers"].map(fmt_pct).values,
-            "Rata-rata Hari sejak Pembelian Terakhir": summary["avg_recency"].map(lambda x: fmt_dec(x, 0)).values,
+            "Rata-rata Hari sejak Pembelian Terakhir": summary["avg_recency"].map(fmt_dec).values,
             "Rata-rata Belanja (R$)": summary["avg_monetary"].map(fmt_dec).values,
             "% Pembeli Berulang": summary["pct_repeat"].map(fmt_pct).values,
             "% Revenue": summary["pct_revenue"].map(fmt_pct).values,
@@ -150,9 +155,8 @@ def section_rfm(df):
         st.dataframe(table, hide_index=True)
 
 
-# ---------------------------------------------------------------------------
+
 # Bagian 2: Durasi pengiriman dan skor ulasan
-# ---------------------------------------------------------------------------
 def section_delivery(df):
     st.subheader("Durasi Pengiriman dan Skor Ulasan")
     reviewed = df[df["review_score"].notna()]
@@ -204,7 +208,7 @@ def section_delivery(df):
     ax[1].set_ylim(0, 5.3)
     for i, (val, n, pct) in enumerate(zip(late_vals, late["total_orders"].fillna(0), late["pct_positive"].fillna(0))):
         if n > 0:
-            ax[1].text(i, val + 0.12, f"{fmt_dec(val)}\n{fmt_pct(pct)} ulasan positif\n({fmt_int(n)} pesanan)",
+            ax[1].text(i, val + 0.12, f"{fmt_dec(val)}\n{fmt_pct(pct, 1)} ulasan positif\n({fmt_int(n)} pesanan)",
                        ha="center", fontsize=8.5, fontweight="bold")
     for a in ax:
         a.grid(axis="x", visible=False)
@@ -228,9 +232,8 @@ def section_delivery(df):
         st.dataframe(table, hide_index=True)
 
 
-# ---------------------------------------------------------------------------
+
 # Bagian 3: Metode pembayaran dan cicilan
-# ---------------------------------------------------------------------------
 def section_payment(df):
     st.subheader("Metode Pembayaran dan Cicilan")
     pay = df[df["primary_payment_type"].notna()]
@@ -248,7 +251,7 @@ def section_payment(df):
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Pesanan dengan Data Pembayaran", fmt_int(len(pay)))
-    col2.metric("Total Nilai Transaksi", f"R$ {fmt_int(pay['total_payment_value'].sum())}")
+    col2.metric("Total Nilai Transaksi", f"R$ {fmt_dec(pay['total_payment_value'].sum())}")
     col3.metric("Rata-rata Nilai Pesanan (AOV)", f"R$ {fmt_dec(pay['total_payment_value'].mean())}")
 
     # Filter metode pembayaran: hanya memengaruhi grafik kiri dan tabel di bagian ini
@@ -282,8 +285,8 @@ def section_payment(df):
         ax[0].set_xlabel("Metode Pembayaran Utama")
         ax[0].set_ylabel("Persentase terhadap Seluruh Pesanan / Nilai (%)")
         ax[0].set_title("Porsi Pesanan vs Porsi Nilai Transaksi per Metode", fontsize=12, fontweight="bold")
-        ax[0].bar_label(b1, labels=[fmt_pct(v) for v in shown["order_share_pct"]], padding=3, fontsize=8.5, fontweight="bold")
-        ax[0].bar_label(b2, labels=[fmt_pct(v) for v in shown["value_share_pct"]], padding=3, fontsize=8.5, fontweight="bold")
+        ax[0].bar_label(b1, labels=[fmt_pct(v, 1) for v in shown["order_share_pct"]], padding=3, fontsize=8.5, fontweight="bold")
+        ax[0].bar_label(b2, labels=[fmt_pct(v, 1) for v in shown["value_share_pct"]], padding=3, fontsize=8.5, fontweight="bold")
         ax[0].set_ylim(0, max(shown["order_share_pct"].max(), shown["value_share_pct"].max()) * 1.18)
         ax[0].legend()
 
@@ -324,10 +327,7 @@ def section_payment(df):
         })
         st.dataframe(table, hide_index=True)
 
-
-# ---------------------------------------------------------------------------
 # Halaman utama
-# ---------------------------------------------------------------------------
 def main():
     st.title("Dashboard Analisis E-Commerce")
     st.caption("Pesanan berstatus delivered, 15 September 2016 - 29 Agustus 2018. Nilai uang dalam Brazilian Real (R$).")
@@ -341,7 +341,7 @@ def main():
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Pesanan", fmt_int(filtered["order_id"].nunique()))
     col2.metric("Pelanggan Unik", fmt_int(filtered["customer_unique_id"].nunique()))
-    col3.metric("Total Revenue (harga barang)", f"R$ {fmt_int(filtered['total_items_price'].sum())}")
+    col3.metric("Total Revenue (harga barang)", f"R$ {fmt_dec(filtered['total_items_price'].sum())}")
     col4.metric("Rata-rata Skor Ulasan", fmt_dec(filtered["review_score"].mean()))
 
     tab_rfm, tab_delivery, tab_payment = st.tabs(
