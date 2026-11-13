@@ -20,14 +20,6 @@ PAYMENT_LABELS = {"credit_card": "Credit Card", "boleto": "Boleto",
                   "voucher": "Voucher", "debit_card": "Debit Card"}
 
 
-# ---------------------------------------------------------------------------
-# Fungsi bantu format angka (pemisah ribuan titik, desimal koma)
-#
-# Aturan presisi agar angka dashboard sama dengan notebook:
-# - Metrik, tabel, dan caption memakai 2 desimal, seperti output teks notebook.
-# - Label di dalam grafik memakai 1 desimal untuk persen dan bilangan bulat untuk
-#   nilai rupiah, seperti label pada grafik di notebook.
-# ---------------------------------------------------------------------------
 def fmt_int(x):
     if pd.isna(x):
         return "-"
